@@ -28,12 +28,12 @@
   },
   "permissions": {
     "allow": [
-      "Bash(bin/fm-bearings-snapshot *)",
+      "Bash(bin/fm-bearings-snapshot.sh *)",
       "Bash(bin/fm-review-diff.sh *)",
       "Bash(bin/fm-crew-state.sh *)",
       "Bash(quota-axi)",
       "Bash(bin/fm-peek.sh *)",
-      "Bash(bin/fm-project-mode *)",
+      "Bash(bin/fm-project-mode.sh *)",
       "Bash(treehouse status)",
       "Bash(no-mistakes doctor)",
       "Bash(no-mistakes axi status)",
