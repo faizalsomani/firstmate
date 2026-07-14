@@ -838,7 +838,7 @@ if [ "$KIND" != secondmate ] && [ "$BACKEND" != orca ]; then
   # secondmate homes (bin/fm-home-seed.sh's acquire_treehouse_home). Unlike
   # bare `get`, `--lease` opens no subshell and only prints the worktree path,
   # so the pane still has to be told to cd there.
-  WT=$( (cd "$PROJ_ABS" && treehouse get --lease --lease-holder "$ID") 2>/dev/null ) || {
+  WT=$( (cd "$PROJ_ABS" && treehouse get --lease --lease-holder "$ID") ) || {
     echo "error: treehouse get --lease failed to lease a worktree for $ID" >&2
     exit 1
   }
