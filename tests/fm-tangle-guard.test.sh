@@ -149,9 +149,11 @@ test_brief_assertion_precedes_branch() {
 
 # --- GUARD 1b: fm-spawn isolation abort -------------------------------------
 
-# A fake tmux that reports FM_FAKE_PANE_PATH as the post-`treehouse get` pane cwd
-# (so the spawn's worktree-resolution loop resolves to a path we control), names
-# the session on '#S', and swallows window ops. Echoes the fakebin dir.
+# A fake tmux that reports FM_FAKE_PANE_PATH as the post-`cd` pane cwd (so the
+# spawn's worktree-confirmation poll resolves to a path we control), names the
+# session on '#S', and swallows window ops. Echoes the fakebin dir. The fake
+# treehouse leases that same FM_FAKE_PANE_PATH so the leased path and the pane's
+# reported cwd agree, exactly as a real lease + successful pane cd would.
 make_spawn_fakebin() {
   local dir=$1 fakebin
   fakebin=$(fm_fakebin "$dir")
@@ -169,7 +171,15 @@ esac
 exit 0
 SH
   chmod +x "$fakebin/tmux"
-  fm_fake_exit0 "$fakebin" treehouse
+  cat > "$fakebin/treehouse" <<'SH'
+#!/usr/bin/env bash
+set -u
+case "$*" in
+  "get --lease --lease-holder "*) printf '%s\n' "${FM_FAKE_PANE_PATH:-}"; exit 0 ;;
+esac
+exit 0
+SH
+  chmod +x "$fakebin/treehouse"
   printf '%s\n' "$fakebin"
 }
 
@@ -224,11 +234,12 @@ test_spawn_isolation_abort() {
 #     tmux appends at the next free index instead of the active window index, which
 #     collides under base-index 1;
 #   - the window id is captured (-P -F #{window_id}) and automatic-rename/allow-rename
-#     are disabled so the fm-<id> name survives treehouse cd'ing into the worktree;
-#   - the treehouse-get send-keys and the worktree wait loop target that stable
-#     window id, never the (possibly-renamed) name - a lost name would let
-#     display-message fall back to the active client's window and misread firstmate's
-#     OWN pane as the worktree, tangling a hook into the primary checkout.
+#     are disabled so the fm-<id> name survives the leased worktree's cd;
+#   - the leased-worktree cd send-keys and the worktree-confirmation wait loop
+#     target that stable window id, never the (possibly-renamed) name - a lost
+#     name would let display-message fall back to the active client's window and
+#     misread firstmate's OWN pane as the worktree, tangling a hook into the
+#     primary checkout.
 make_spawn_record_fakebin() {
   local dir=$1 fakebin
   fakebin=$(fm_fakebin "$dir")
@@ -248,7 +259,16 @@ esac
 exit 0
 SH
   chmod +x "$fakebin/tmux"
-  fm_fake_exit0 "$fakebin" treehouse
+  cat > "$fakebin/treehouse" <<'SH'
+#!/usr/bin/env bash
+set -u
+[ -n "${FM_TMUX_REC:-}" ] && printf 'treehouse %s\n' "$*" >> "$FM_TMUX_REC"
+case "$*" in
+  "get --lease --lease-holder "*) printf '%s\n' "${FM_FAKE_PANE_PATH:-}"; exit 0 ;;
+esac
+exit 0
+SH
+  chmod +x "$fakebin/treehouse"
   printf '%s\n' "$fakebin"
 }
 
@@ -292,11 +312,16 @@ test_spawn_tmux_window_construction() {
   assert_grep "set-window-option -t @spawnwid allow-rename off" "$rec" \
     "must disable allow-rename on the spawned window"
 
-  # Bug 2 fix (b): treehouse-get and the worktree wait loop target the stable id.
-  assert_grep "send-keys -t @spawnwid treehouse get Enter" "$rec" \
-    "treehouse get must be sent to the stable window id"
+  # Bug 2 fix (b): the leased-worktree cd and the worktree wait loop target the
+  # stable id. The worktree is durably leased from firstmate's own process
+  # first (treehouse get --lease --lease-holder <task-id>), then the pane is
+  # told to cd there.
+  assert_grep "get --lease --lease-holder rec-win-gg7" "$rec" \
+    "the worktree must be durably leased under the task id before the pane is touched"
+  assert_grep "send-keys -t @spawnwid cd '$wt' Enter" "$rec" \
+    "the leased worktree cd must be sent to the stable window id"
   assert_grep "display-message -p -t @spawnwid #{pane_current_path}" "$rec" \
-    "the worktree wait loop must query the stable window id, not the name"
+    "the worktree confirmation wait loop must query the stable window id, not the name"
 
   pass "fm-spawn: appends windows by session-colon, pins the name, and targets the window id"
 }
