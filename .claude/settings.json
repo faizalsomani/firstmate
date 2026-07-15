@@ -25,5 +25,26 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(bin/fm-bearings-snapshot *)",
+      "Bash(bin/fm-review-diff.sh *)",
+      "Bash(bin/fm-crew-state.sh *)",
+      "Bash(quota-axi)",
+      "Bash(bin/fm-peek.sh *)",
+      "Bash(bin/fm-project-mode *)",
+      "Bash(treehouse status)",
+      "Bash(no-mistakes doctor)",
+      "Bash(no-mistakes axi status)",
+      "Bash(wezterm cli list)",
+      "Bash(wezterm show-keys*)",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__claude_ai_Notion__notion-search",
+      "mcp__claude_ai_Slack__slack_search_public_and_private",
+      "mcp__claude_ai_Slack__slack_search_users",
+      "mcp__claude_ai_Slack__slack_search_channels",
+      "mcp__claude_ai_Slack__slack_read_thread"
+    ]
   }
 }
