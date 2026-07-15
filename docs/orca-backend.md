@@ -43,7 +43,7 @@ Before spawn mutates any repo/worktree state, firstmate runs `orca status --json
 ## Task Shape
 
 An Orca task is one Orca-managed git worktree plus one Orca terminal.
-Unlike `tmux`, `herdr`, `zellij`, and `cmux`, Orca is not only a session provider; it also provides the task worktree, so `fm-spawn.sh` does not run `treehouse get` for Orca tasks.
+Unlike `tmux`, `herdr`, `zellij`, and `cmux`, Orca is not only a session provider; it also provides the task worktree, so `fm-spawn.sh` does not lease a treehouse worktree for Orca tasks.
 
 The normal firstmate invariant still applies: a ship or scout task must run outside the project primary checkout, and teardown must refuse to discard unlanded ship work.
 
