@@ -757,7 +757,7 @@ fm_backend_herdr_composer_state() {  # <target> -> empty|pending|unknown
         found=1
         ;;
       *)
-        if printf '%s' "$trimmed" | grep -qE "$FM_BACKEND_HERDR_BARE_PROMPT_RE"; then
+        if [[ $trimmed =~ $FM_BACKEND_HERDR_BARE_PROMPT_RE ]]; then
           shape=bare
           raw_match=$line
           found=1
