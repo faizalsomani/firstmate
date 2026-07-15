@@ -693,8 +693,8 @@ case "$BACKEND" in
     T="$SES:$W"
     # #134 robustness (tmux): fm_backend_tmux_create_task captures a stable window
     # id and pins the window name (automatic-rename/allow-rename off) so a captain's
-    # non-default tmux config cannot rename the window away from fm-<id> once
-    # treehouse cd's into the worktree. WT_TARGET carries that stable id for the
+    # non-default tmux config cannot rename the window away from fm-<id> once the
+    # pane cd's into the leased worktree. WT_TARGET carries that stable id for the
     # rename-critical worktree-detection steps below; the persisted window= handle
     # stays $T (the name form), which is safe now that rename is disabled.
     WID=$(fm_backend_tmux_create_task "$SES" "$W" "$PROJ_ABS") || exit 1
@@ -829,30 +829,53 @@ spawn_send_key() {  # <target> <key>
   esac
 }
 if [ "$KIND" != secondmate ] && [ "$BACKEND" != orca ]; then
-  spawn_send_text_line "$WT_TARGET" 'treehouse get'
+  # Lease the worktree from firstmate's OWN process, not by typing bare `get`
+  # into the crewmate's pane: plain `get` is only a transient reservation
+  # tracked by scanning for a live process rooted in the worktree, not durable
+  # persistent-state tracking, which is a real duplicate-dispatch risk under a
+  # single-slot pool. `--lease --lease-holder` durably marks the slot leased
+  # before anything touches the pane, the same pattern already used for
+  # secondmate homes (bin/fm-home-seed.sh's acquire_treehouse_home). Unlike
+  # bare `get`, `--lease` opens no subshell and only prints the worktree path,
+  # so the pane still has to be told to cd there.
+  WT=$( (cd "$PROJ_ABS" && treehouse get --lease --lease-holder "$ID") ) || {
+    echo "error: treehouse get --lease failed to lease a worktree for $ID" >&2
+    exit 1
+  }
+  [ -n "$WT" ] || {
+    echo "error: treehouse get --lease did not report a worktree path for $ID" >&2
+    exit 1
+  }
 
-  # Wait for the treehouse subshell: the pane's cwd moves from the project to the worktree.
-  # Target the stable window id, not the name: if the name is ever lost (e.g. an
-  # automatic-rename slips through), display-message -t <bad-name> falls back to the
-  # active client's window, which would misread firstmate's OWN pane path as the
-  # worktree and tangle a hook into the primary checkout. The window id never lies.
-  # Compare against PROJ_ABS_REAL (physical), not PROJ_ABS: a symlinked project
-  # prefix would otherwise make the pane's OS-level cwd read differ from
-  # PROJ_ABS on the very first poll, before the pane has actually moved.
+  spawn_send_text_line "$WT_TARGET" "cd $(shell_quote "$WT")"
+
+  # Confirm the pane actually moved before trusting $WT: target the stable
+  # window id, not the name (an automatic-rename slip would make
+  # display-message -t <bad-name> fall back to the active client's window,
+  # misreading firstmate's OWN pane path as the worktree and tangling a hook
+  # into the primary checkout - the window id never lies), and compare
+  # physical paths, since a symlinked worktree or project prefix would
+  # otherwise make the pane's OS-level cwd read differ from $WT on the very
+  # first poll, before the pane has actually moved.
+  WT_REAL=$(real_path_or_raw "$WT")
+  moved=
   for _ in $(seq 1 60); do
     p=$(spawn_current_path "$WT_TARGET" || true)
-    if [ -n "$p" ] && [ "$(real_path_or_raw "$p")" != "$PROJ_ABS_REAL" ]; then
-      WT="$p"
+    if [ -n "$p" ] && [ "$(real_path_or_raw "$p")" = "$WT_REAL" ]; then
+      moved=1
       break
     fi
     sleep 1
   done
-  if [ -z "$WT" ]; then
-    echo "error: treehouse get did not enter a worktree within 60s; inspect window $T" >&2
+  if [ -z "$moved" ]; then
+    # The pane never picked up the lease; return it best-effort so the slot
+    # isn't left durably leased forever with nothing using it.
+    ( cd "$PROJ_ABS" && treehouse return --force "$WT" ) >/dev/null 2>&1 || true
+    echo "error: pane did not cd into leased worktree $WT within 60s; inspect window $T" >&2
     exit 1
   fi
 
-  validate_spawn_worktree "treehouse get" "$T"
+  validate_spawn_worktree "treehouse get --lease" "$T"
 fi
 
 # Per-task temp root: /tmp/fm-<id>/ with Go's build temp nested at gotmp/. Go won't
