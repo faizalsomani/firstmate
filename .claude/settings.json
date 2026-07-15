@@ -36,15 +36,7 @@
       "Bash(bin/fm-project-mode.sh *)",
       "Bash(treehouse status)",
       "Bash(no-mistakes doctor)",
-      "Bash(no-mistakes axi status)",
-      "Bash(wezterm cli list)",
-      "Bash(wezterm show-keys*)",
-      "mcp__claude_ai_Notion__notion-fetch",
-      "mcp__claude_ai_Notion__notion-search",
-      "mcp__claude_ai_Slack__slack_search_public_and_private",
-      "mcp__claude_ai_Slack__slack_search_users",
-      "mcp__claude_ai_Slack__slack_search_channels",
-      "mcp__claude_ai_Slack__slack_read_thread"
+      "Bash(no-mistakes axi status)"
     ]
   }
 }
