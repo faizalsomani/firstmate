@@ -87,8 +87,8 @@ See [`wedge-alarm.md`](wedge-alarm.md) for the channel reference and macOS verif
 
 ## Gate defaults (.no-mistakes.yaml)
 
-The tracked `.no-mistakes.yaml` keeps test evidence outside the repo and defines `commands.test` so no-mistakes runs firstmate's bash behavior suite directly.
-That evidence policy is specific to the firstmate repo: target projects may legitimately commit `.no-mistakes/evidence/` from their own no-mistakes pipeline, but firstmate keeps `.no-mistakes/` local and CI rejects tracked entries under that path.
+The tracked `.no-mistakes.yaml` pins `test.evidence.store_in_repo: false` and defines `commands.test` so no-mistakes runs firstmate's bash behavior suite directly.
+Committing `.no-mistakes/evidence/` is opt-in per project, not a pipeline default: a target project may set `test.evidence.store_in_repo: true` in its own `.no-mistakes.yaml` to have its pipeline commit test evidence from its own crew branches, but firstmate keeps `.no-mistakes/` local and CI rejects tracked entries under that path (`AGENTS.md` owns the mechanism and the handling rule for a branch that has opted in).
 That command requires `tmux` on `PATH`, prints `tmux -V`, runs every `tests/*.test.sh` with `bash`, and fails if any script exits non-zero.
 It intentionally mirrors the behavior-test baseline in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) instead of delegating the test step to an agent.
 
